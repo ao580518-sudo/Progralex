@@ -1,0 +1,42 @@
+#include <iostream>
+using namespace std;
+
+int main() {
+    double num1, num2, resultado;
+    char operacion;
+
+    cout << "=== CALCULADORA BASICA ===" << endl;
+    cout << "Ingresa el primer número: ";
+    cin >> num1;
+
+    cout << "Ingresa la operación (+, -, *, /): ";
+    cin >> operacion;
+
+    cout << "Ingresa el segundo número: ";
+    cin >> num2;
+
+    if (operacion == '+') {
+        resultado = num1 + num2;
+    } 
+    else if (operacion == '-') {
+        resultado = num1 - num2;
+    } 
+    else if (operacion == '*') {
+        resultado = num1 * num2;
+    } 
+    else if (operacion == '/') {
+        if (num2 == 0) {
+            cout << "Error: no se puede dividir entre cero." << endl;
+            return 0;
+        }
+        resultado = num1 / num2;
+    } 
+    else {
+        cout << "Operación no válida." << endl;
+        return 0;
+    }
+
+    cout << "El resultado es: " << resultado << endl;
+
+    return 0;
+}
