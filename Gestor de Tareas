@@ -1,0 +1,144 @@
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <string>
+#include <iomanip>
+
+using namespace std;
+
+struct Tarea {
+    int id;
+    string descripcion;
+    bool completada;
+};
+
+// --- Funciones ---
+void mostrarMenu();
+void agregarTarea(vector<Tarea>& tareas);
+void listarTareas(const vector<Tarea>& tareas);
+void completarTarea(vector<Tarea>& tareas);
+void eliminarTarea(vector<Tarea>& tareas);
+void guardarTareas(const vector<Tarea>& tareas);
+void cargarTareas(vector<Tarea>& tareas);
+
+int main() {
+    vector<Tarea> tareas;
+    int opcion;
+    cargarTareas(tareas);
+
+    do {
+        mostrarMenu();
+        cout << "Elige una opción: ";
+        cin >> opcion;
+        cin.ignore(); // limpiar buffer
+
+        switch (opcion) {
+            case 1: agregarTarea(tareas); break;
+            case 2: listarTareas(tareas); break;
+            case 3: completarTarea(tareas); break;
+            case 4: eliminarTarea(tareas); break;
+            case 5: guardarTareas(tareas); cout << "¡Tareas guardadas! Saliendo...\n"; break;
+            default: cout << "Opción no válida.\n"; break;
+        }
+
+    } while (opcion != 5);
+
+    return 0;
+}
+
+// --- Implementación de funciones ---
+
+void mostrarMenu() {
+    cout << "\n=== GESTOR DE TAREAS ===\n";
+    cout << "1. Agregar tarea\n";
+    cout << "2. Listar tareas\n";
+    cout << "3. Marcar tarea como completada\n";
+    cout << "4. Eliminar tarea\n";
+    cout << "5. Salir y guardar\n";
+    cout << "=========================\n";
+}
+
+void agregarTarea(vector<Tarea>& tareas) {
+    Tarea nueva;
+    nueva.id = tareas.empty() ? 1 : tareas.back().id + 1;
+    cout << "Descripción de la tarea: ";
+    getline(cin, nueva.descripcion);
+    nueva.completada = false;
+    tareas.push_back(nueva);
+    cout << "Tarea agregada correctamente.\n";
+}
+
+void listarTareas(const vector<Tarea>& tareas) {
+    if (tareas.empty()) {
+        cout << "No hay tareas registradas.\n";
+        return;
+    }
+
+    cout << "\n--- LISTA DE TAREAS ---\n";
+    cout << left << setw(5) << "ID" << setw(50) << "Descripción" << "Estado\n";
+    cout << "--------------------------------------------------------------\n";
+
+    for (const auto& t : tareas) {
+        cout << left << setw(5) << t.id
+             << setw(50) << t.descripcion
+             << (t.completada ? "[Completada]" : "[Pendiente]") << "\n";
+    }
+}
+
+void completarTarea(vector<Tarea>& tareas) {
+    int id;
+    cout << "ID de la tarea a completar: ";
+    cin >> id;
+
+    for (auto& t : tareas) {
+        if (t.id == id) {
+            t.completada = true;
+            cout << "Tarea marcada como completada.\n";
+            return;
+        }
+    }
+    cout << "No se encontró una tarea con ese ID.\n";
+}
+
+void eliminarTarea(vector<Tarea>& tareas) {
+    int id;
+    cout << "ID de la tarea a eliminar: ";
+    cin >> id;
+
+    for (auto it = tareas.begin(); it != tareas.end(); ++it) {
+        if (it->id == id) {
+            tareas.erase(it);
+            cout << "Tarea eliminada.\n";
+            return;
+        }
+    }
+    cout << "No se encontró una tarea con ese ID.\n";
+}
+
+void guardarTareas(const vector<Tarea>& tareas) {
+    ofstream archivo("tareas.txt");
+    for (const auto& t : tareas) {
+        archivo << t.id << "|" << t.descripcion << "|" << t.completada << "\n";
+    }
+    archivo.close();
+}
+
+void cargarTareas(vector<Tarea>& tareas) {
+    ifstream archivo("tareas.txt");
+    if (!archivo.is_open()) return;
+
+    tareas.clear();
+    Tarea t;
+    string linea;
+
+    while (getline(archivo, linea)) {
+        size_t p1 = linea.find('|');
+        size_t p2 = linea.find('|', p1 + 1);
+        t.id = stoi(linea.substr(0, p1));
+        t.descripcion = linea.substr(p1 + 1, p2 - p1 - 1);
+        t.completada = stoi(linea.substr(p2 + 1)) == 1;
+        tareas.push_back(t);
+    }
+
+    archivo.close();
+}
