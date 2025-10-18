@@ -1,3 +1,5 @@
+//SERVIDOR
+
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -87,5 +89,72 @@ int main() {
     }
 
     close(servidorSocket);
+    return 0;
+}
+
+
+//CLIENTE
+
+#include <iostream>
+#include <thread>
+#include <string>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+using namespace std;
+
+void recibirMensajes(int socketCliente) {
+    char buffer[1024];
+    while (true) {
+        ssize_t bytesRecibidos = recv(socketCliente, buffer, sizeof(buffer) - 1, 0);
+        if (bytesRecibidos <= 0) {
+            cout << "Conexión cerrada por el servidor.\n";
+            close(socketCliente);
+            exit(0);
+        }
+        buffer[bytesRecibidos] = '\0';
+        cout << "\n📨 " << buffer << "\n> ";
+        fflush(stdout);
+    }
+}
+
+int main() {
+    int socketCliente;
+    struct sockaddr_in servidorAddr;
+    const int PORT = 8080;
+    string ipServidor = "127.0.0.1"; // localhost
+
+    socketCliente = socket(AF_INET, SOCK_STREAM, 0);
+    if (socketCliente == -1) {
+        cerr << "Error al crear socket.\n";
+        return -1;
+    }
+
+    servidorAddr.sin_family = AF_INET;
+    servidorAddr.sin_port = htons(PORT);
+    inet_pton(AF_INET, ipServidor.c_str(), &servidorAddr.sin_addr);
+
+    if (connect(socketCliente, (struct sockaddr*)&servidorAddr, sizeof(servidorAddr)) < 0) {
+        cerr << "Error al conectar con el servidor.\n";
+        return -1;
+    }
+
+    cout << "Conectado al servidor en " << ipServidor << ":" << PORT << endl;
+
+    thread hiloEscucha(recibirMensajes, socketCliente);
+    hiloEscucha.detach();
+
+    string mensaje;
+    cout << "> ";
+    while (true) {
+        getline(cin, mensaje);
+        if (mensaje == "salir") {
+            break;
+        }
+        send(socketCliente, mensaje.c_str(), mensaje.size(), 0);
+    }
+
+    close(socketCliente);
+    cout << "Desconectado del servidor.\n";
     return 0;
 }
