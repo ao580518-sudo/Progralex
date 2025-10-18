@@ -1,0 +1,91 @@
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <string>
+#include <mutex>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+using namespace std;
+
+vector<int> clientes;
+mutex mtx;
+
+void manejarCliente(int clientSocket) {
+    char buffer[1024];
+    string mensaje;
+
+    while (true) {
+        ssize_t bytesRecibidos = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+        if (bytesRecibidos <= 0) {
+            cout << "Cliente desconectado.\n";
+            close(clientSocket);
+            mtx.lock();
+            clientes.erase(remove(clientes.begin(), clientes.end(), clientSocket), clientes.end());
+            mtx.unlock();
+            break;
+        }
+
+        buffer[bytesRecibidos] = '\0';
+        mensaje = buffer;
+
+        cout << "Mensaje recibido: " << mensaje << endl;
+
+        // Reenviar mensaje a todos los demás clientes
+        mtx.lock();
+        for (int cliente : clientes) {
+            if (cliente != clientSocket) {
+                send(cliente, mensaje.c_str(), mensaje.size(), 0);
+            }
+        }
+        mtx.unlock();
+    }
+}
+
+int main() {
+    int servidorSocket, nuevoSocket;
+    struct sockaddr_in servidorAddr, clienteAddr;
+    socklen_t clienteLen = sizeof(clienteAddr);
+    const int PORT = 8080;
+
+    servidorSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (servidorSocket == -1) {
+        cerr << "Error al crear el socket.\n";
+        return -1;
+    }
+
+    servidorAddr.sin_family = AF_INET;
+    servidorAddr.sin_addr.s_addr = INADDR_ANY;
+    servidorAddr.sin_port = htons(PORT);
+
+    if (bind(servidorSocket, (struct sockaddr*)&servidorAddr, sizeof(servidorAddr)) < 0) {
+        cerr << "Error en bind.\n";
+        return -1;
+    }
+
+    if (listen(servidorSocket, 5) < 0) {
+        cerr << "Error en listen.\n";
+        return -1;
+    }
+
+    cout << "Servidor escuchando en el puerto " << PORT << "...\n";
+
+    while (true) {
+        nuevoSocket = accept(servidorSocket, (struct sockaddr*)&clienteAddr, &clienteLen);
+        if (nuevoSocket < 0) {
+            cerr << "Error al aceptar conexión.\n";
+            continue;
+        }
+
+        mtx.lock();
+        clientes.push_back(nuevoSocket);
+        mtx.unlock();
+
+        cout << "Nuevo cliente conectado.\n";
+        thread hiloCliente(manejarCliente, nuevoSocket);
+        hiloCliente.detach(); // hilo independiente
+    }
+
+    close(servidorSocket);
+    return 0;
+}
